@@ -35,10 +35,22 @@ class Png:
         self.chunks = [item for item in self.chunks if item[0] != b'IDAT']
         self.chunks.insert(-1, (b'IDAT', IDAT_data))
 
-    # def parse_IDAT(self,chunk):
+    def parse_IHDR(self):
+        if self.chunks[0][0] == b'IHDR':
+            Width = int.from_bytes(self.chunks[0][1][:4], byteorder="big")
+            Height = int.from_bytes(self.chunks[0][1][4:8], byteorder="big")
+            Bit_depth = self.chunks[0][1][8]
+            Color_type = self.chunks[0][1][9]
+            Compression_method = self.chunks[0][1][10]
+            Filter_method = self.chunks[0][1][11]
+            Interlace_method = self.chunks[0][1][12]
+            return Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method
+        else:
+            raise Exception("IHDR should be the second chunk")
 
 
 example = Png('Data/example.png')
 if example.check_signature():
     example.read_all_chunks()
-    print(example.chunks)
+    Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
+    print(1)
