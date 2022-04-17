@@ -26,7 +26,16 @@ class Png:
         while 1:
             chunk_type, chunk_data = self.read_chunks()
             self.chunks.append((chunk_type, chunk_data))
-            if chunk_type == b'IEND': break
+            if chunk_type == b'IEND':
+                self.merge_chunks()
+                break
+
+    def merge_chunks(self):
+        IDAT_data = b''.join(chunk_data for chunk_type, chunk_data in self.chunks if chunk_type == b'IDAT')
+        self.chunks = [item for item in self.chunks if item[0] != b'IDAT']
+        self.chunks.insert(-1, (b'IDAT', IDAT_data))
+
+    # def parse_IDAT(self,chunk):
 
 
 example = Png('Data/example.png')
