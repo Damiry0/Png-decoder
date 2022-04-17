@@ -48,6 +48,12 @@ class Png:
         else:
             raise Exception("IHDR should be the second chunk")
 
+    def parse_PLTE(self, chunk):
+        red = chunk[1][0]
+        green = chunk[1][0]
+        blue = chunk[1][2]
+        return red, green, blue
+
 
 example = Png('Data/example.png')
 if example.check_signature():
