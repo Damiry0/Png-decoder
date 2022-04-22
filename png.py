@@ -4,9 +4,13 @@ import numpy as np
 
 
 class Png:
+    LENGTH_BYTES = 4
+
     def __init__(self, filepath):
         self.file = open(filepath, 'rb')
         self.chunks = []
+        self.output_image = []
+        self.step = []
 
     def check_signature(self):
         return self.file.read(8) == b'\x89PNG\r\n\x1a\n'  # png signature in binary
@@ -27,12 +31,12 @@ class Png:
             chunk_type, chunk_data = self.read_chunks()
             self.chunks.append((chunk_type, chunk_data))
             if chunk_type == b'IEND':
-                self.merge_chunks()
+                self.merge_idat_chunks()
                 break
 
-    def merge_chunks(self):
+    def merge_idat_chunks(self):
         IDAT_data = b''.join(chunk_data for chunk_type, chunk_data in self.chunks if chunk_type == b'IDAT')
-    x        IDAT_data = zlib.decompress(IDAT_data)
+        IDAT_data = zlib.decompress(IDAT_data)
         self.chunks = [item for item in self.chunks if item[0] != b'IDAT']
         self.chunks.insert(-1, (b'IDAT', IDAT_data))
 
@@ -45,6 +49,7 @@ class Png:
             Compression_method = self.chunks[0][1][10]
             Filter_method = self.chunks[0][1][11]
             Interlace_method = self.chunks[0][1][12]
+            self.step = self.LENGTH_BYTES * Width
             return Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method
         else:
             raise Exception("IHDR should be the second chunk")
@@ -55,7 +60,7 @@ class Png:
         blue = chunk[1][2]
         return red, green, blue
 
-    def paeth_predictor(a, b, c):
+    def paeth_predictor(self, a, b, c):
         p = a + b - c  # a= left, b= above, c= right
         pa = abs(p - a)
         pb = abs(p - b)
@@ -69,20 +74,39 @@ class Png:
         else:
             return c
 
-    # def unfilter_sub(self):
-    #     return
-    # def unfilter_up(self):
-    #     return
-    # def unfilter_average(self):
-    #     return
-    # def unfilter_paeth(self):
-    #     return
+    def unfilter_sub(self, r, c):
+        return self.output_image[r * self.step + c - self.LENGTH_BYTES] if c >= self.LENGTH_BYTES else 0
 
+    def unfilter_up(self, r, c):
+        return self.output_image[(r - 1) * self.step + c] if r > 0 else 0
 
-def parse_IDAT(self,chunk):
-        output_image=[]
-        filter_type=chunk[]
+    def unfilter_average(self, r, c):
+        return self.output_image[(r - 1) * self.step + c - self.LENGTH_BYTES] if r > 0 and c >= self.LENGTH_BYTES else 0
 
+    def parse_IDAT(self, height):
+        i = 0
+        idat_chunk = [(x, y) for x, y in self.chunks if x == b"IDAT"][0][1]
+        for j in range(height):
+            filter_type = idat_chunk[i]
+            i += 1
+            for k in range(self.step):
+                Filter = idat_chunk[i]
+                i += 1
+                if filter_type == 0:
+                    Recon_x = Filter
+                elif filter_type == 1:
+                    Recon_x = Filter + self.unfilter_sub(j, k)
+                elif filter_type == 2:
+                    Recon_x = Filter + self.unfilter_up(j, k)
+                elif filter_type == 3:
+                    Recon_x = Filter + (self.unfilter_sub(j, k) + self.unfilter_up(j, k)) // 2
+                elif filter_type == 4:
+                    Recon_x = Filter + self.paeth_predictor(self.unfilter_sub(j, k), self.unfilter_up(j, k),
+                                                            self.unfilter_average(j, k))
+                else:
+                    raise Exception('unknown filter type: ' + str(filter_type))
+                self.output_image.append(Recon_x & 0xff)  # truncation to byte
+        return self.output_image
 
 
 
@@ -90,4 +114,7 @@ example = Png('Data/example.png')
 if example.check_signature():
     example.read_all_chunks()
     Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
+    image=example.parse_IDAT(Height)
+    plt.imshow(np.array(image).reshape((Height, Width, 4)))
+    plt.show()
     print(1)
