@@ -5,12 +5,12 @@ import numpy as np
 
 class Png:
     LENGTH_OF_BYTES = 4
+    STEP = 0
 
     def __init__(self, filepath):
         self.file = open(filepath, 'rb')
         self.chunks = []
         self.output_image = []
-        self.step = []
 
     def check_signature(self):
         return self.file.read(8) == b'\x89PNG\r\n\x1a\n'  # png signature in binary
@@ -42,23 +42,24 @@ class Png:
 
     def parse_IHDR(self):
         if self.chunks[0][0] == b'IHDR':
-            Width = int.from_bytes(self.chunks[0][1][:4], byteorder="big")
-            Height = int.from_bytes(self.chunks[0][1][4:8], byteorder="big")
-            Bit_depth = self.chunks[0][1][8]
-            Color_type = self.chunks[0][1][9]
-            Compression_method = self.chunks[0][1][10]
-            Filter_method = self.chunks[0][1][11]
-            Interlace_method = self.chunks[0][1][12]
-            self.step = self.LENGTH_OF_BYTES * Width
-            return Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method
+            width = int.from_bytes(self.chunks[0][1][:4], byteorder="big")
+            height = int.from_bytes(self.chunks[0][1][4:8], byteorder="big")
+            bit_depth = self.chunks[0][1][8] if self.chunks[0][1][8] in (1, 2, 4, 8, 16) else Exception(
+                "Not valid bit depth:" + str(self.chunks[0][1][8]))
+            color_type = self.chunks[0][1][9] if self.chunks[0][1][9] in (0, 2, 3, 4, 6) else Exception(
+                "Not valid Color Type" + str(self.chunks[0][1][9]))
+            compression_method = self.chunks[0][1][10]
+            filter_method = self.chunks[0][1][11]
+            interlace_method = self.chunks[0][1][12]
+            return width, height, bit_depth, color_type, compression_method, filter_method, interlace_method
         else:
             raise Exception("IHDR should be the second chunk")
 
-    def parse_PLTE(self, chunk):
-        red = chunk[1][0]
-        green = chunk[1][0]
-        blue = chunk[1][2]
-        return red, green, blue
+    # def parse_PLTE(self, chunk):
+    #     red = chunk[1][0]
+    #     green = chunk[1][0]
+    #     blue = chunk[1][2]
+    #     return red, green, blue
 
     def paeth_predictor(self, a, b, c):
         p = a + b - c  # a= left, b= above, c= right
@@ -75,21 +76,23 @@ class Png:
             return c
 
     def unfilter_sub(self, r, c):
-        return self.output_image[r * self.step + c - self.LENGTH_OF_BYTES] if c >= self.LENGTH_OF_BYTES else 0
+        return self.output_image[r * self.STEP + c - self.LENGTH_OF_BYTES] if c >= self.LENGTH_OF_BYTES else 0
 
     def unfilter_up(self, r, c):
-        return self.output_image[(r - 1) * self.step + c] if r > 0 else 0
+        return self.output_image[(r - 1) * self.STEP + c] if r > 0 else 0
 
     def unfilter_average(self, r, c):
-        return self.output_image[(r - 1) * self.step + c - self.LENGTH_OF_BYTES] if r > 0 and c >= self.LENGTH_OF_BYTES else 0
+        return self.output_image[
+            (r - 1) * self.STEP + c - self.LENGTH_OF_BYTES] if r > 0 and c >= self.LENGTH_OF_BYTES else 0
 
-    def parse_IDAT(self, height):
+    def parse_IDAT(self, height, width):
         i = 0
         idat_chunk = [(x, y) for x, y in self.chunks if x == b"IDAT"][0][1]
+        self.STEP = self.LENGTH_OF_BYTES * width
         for j in range(height):
             filter_type = idat_chunk[i]
             i += 1
-            for k in range(self.step):
+            for k in range(self.STEP):
                 Filter = idat_chunk[i]
                 i += 1
                 if filter_type == 0:
@@ -114,7 +117,7 @@ def open_png(filepath):
     if example.check_signature():
         example.read_all_chunks()
         Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
-        image = example.parse_IDAT(Height)
+        image = example.parse_IDAT(Height, Width)
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
