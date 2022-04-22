@@ -19,7 +19,7 @@ def draw_figure(canvas, figure):
 
 # define the window layout
 layout = [[sg.Text("Choose a file: "), sg.FileBrowse(key="-IN-")],
-          [sg.Canvas(key='-CANVAS-'), sg.Multiline("", size=(15, 15), key='OUTPUT', visible=False)],
+          [sg.Canvas(key='-CANVAS-'), sg.Multiline("", size=(15, 15), key='OUTPUT', visible=False, no_scrollbar=True)],
           [sg.Button('Decode')]]
 
 # create the form and show it without the plot

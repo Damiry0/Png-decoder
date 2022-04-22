@@ -4,7 +4,7 @@ import numpy as np
 
 
 class Png:
-    LENGTH_BYTES = 4
+    LENGTH_OF_BYTES = 4
 
     def __init__(self, filepath):
         self.file = open(filepath, 'rb')
@@ -49,7 +49,7 @@ class Png:
             Compression_method = self.chunks[0][1][10]
             Filter_method = self.chunks[0][1][11]
             Interlace_method = self.chunks[0][1][12]
-            self.step = self.LENGTH_BYTES * Width
+            self.step = self.LENGTH_OF_BYTES * Width
             return Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method
         else:
             raise Exception("IHDR should be the second chunk")
@@ -75,13 +75,13 @@ class Png:
             return c
 
     def unfilter_sub(self, r, c):
-        return self.output_image[r * self.step + c - self.LENGTH_BYTES] if c >= self.LENGTH_BYTES else 0
+        return self.output_image[r * self.step + c - self.LENGTH_OF_BYTES] if c >= self.LENGTH_OF_BYTES else 0
 
     def unfilter_up(self, r, c):
         return self.output_image[(r - 1) * self.step + c] if r > 0 else 0
 
     def unfilter_average(self, r, c):
-        return self.output_image[(r - 1) * self.step + c - self.LENGTH_BYTES] if r > 0 and c >= self.LENGTH_BYTES else 0
+        return self.output_image[(r - 1) * self.step + c - self.LENGTH_OF_BYTES] if r > 0 and c >= self.LENGTH_OF_BYTES else 0
 
     def parse_IDAT(self, height):
         i = 0
@@ -115,6 +115,8 @@ def open_png(filepath):
         example.read_all_chunks()
         Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
         image = example.parse_IDAT(Height)
+    else:
+        raise Exception("Wrong Filetype")
     fig = plt.figure()
     plt.imshow(np.array(image).reshape((Height, Width, 4)))
     return fig, Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method
