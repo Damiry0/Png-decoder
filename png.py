@@ -32,6 +32,7 @@ class Png:
 
     def merge_chunks(self):
         IDAT_data = b''.join(chunk_data for chunk_type, chunk_data in self.chunks if chunk_type == b'IDAT')
+    x        IDAT_data = zlib.decompress(IDAT_data)
         self.chunks = [item for item in self.chunks if item[0] != b'IDAT']
         self.chunks.insert(-1, (b'IDAT', IDAT_data))
 
@@ -53,6 +54,36 @@ class Png:
         green = chunk[1][0]
         blue = chunk[1][2]
         return red, green, blue
+
+    def paeth_predictor(a, b, c):
+        p = a + b - c  # a= left, b= above, c= right
+        pa = abs(p - a)
+        pb = abs(p - b)
+        pc = abs(p - c)
+        # return nearest of a,b,c
+        # breaking ties in order a,b,c
+        if pa <= pb and pa <= pc:
+            return a
+        elif pb <= pc:
+            return b
+        else:
+            return c
+
+    # def unfilter_sub(self):
+    #     return
+    # def unfilter_up(self):
+    #     return
+    # def unfilter_average(self):
+    #     return
+    # def unfilter_paeth(self):
+    #     return
+
+
+def parse_IDAT(self,chunk):
+        output_image=[]
+        filter_type=chunk[]
+
+
 
 
 example = Png('Data/example.png')
