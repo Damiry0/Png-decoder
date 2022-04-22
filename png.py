@@ -109,12 +109,12 @@ class Png:
         return self.output_image
 
 
-
-example = Png('Data/example.png')
-if example.check_signature():
-    example.read_all_chunks()
-    Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
-    image=example.parse_IDAT(Height)
+def open_png(filepath):
+    example = Png(filepath)
+    if example.check_signature():
+        example.read_all_chunks()
+        Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
+        image = example.parse_IDAT(Height)
+    fig = plt.figure()
     plt.imshow(np.array(image).reshape((Height, Width, 4)))
-    plt.show()
-    print(1)
+    return fig, Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method
