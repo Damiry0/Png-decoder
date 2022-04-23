@@ -122,7 +122,6 @@ class Png:
         rgb = "Unknown"
         for chnk in self.chunks:
             if chnk[0] == b'sRGB':
-                rgb = "XD"
                 rendering_indent = chnk[1]
                 return {
                     b'\x00': "0: Perceptual",
@@ -132,6 +131,21 @@ class Png:
                 }[rendering_indent]
         return rgb
 
+    def parse_pHYs(self):
+        phys = "Unknown"
+        for chnk in self.chunks:
+            if chnk[0] == b'pHYs':
+                phys = "XD"
+                ppuX = chnk[1][:4]
+                ppuY = chnk[1][4:8]
+                unit_b = chnk[1][-1:]
+                if(unit_b):
+                    unit = "meter"
+                else:
+                    unit = "unknown"
+                return int.from_bytes(ppuX, "big"), int.from_bytes(ppuY, "big"), unit
+        return phys
+
 def open_png(filepath):
     example = Png(filepath)
     if example.check_signature():
@@ -140,8 +154,9 @@ def open_png(filepath):
         image = example.parse_IDAT(Height, Width)
         Gamma = example.parse_gAMA()
         SRGB = example.parse_sRGB()
+        PHYs = example.parse_pHYs()
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
     plt.imshow(np.array(image).reshape((Height, Width, 4)))
-    return fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, Compression_method, Filter_method, Interlace_method
+    return fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, Compression_method, Filter_method, Interlace_method
