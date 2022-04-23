@@ -111,6 +111,26 @@ class Png:
                 self.output_image.append(Recon_x & 0xff)  # truncation to byte
         return self.output_image
 
+    def parse_gAMA(self):
+        gamma = "Unknown"
+        for chnk in self.chunks:
+            if chnk[0] == b'gAMA':
+                gamma = "XD"
+        return gamma
+
+    def parse_sRGB(self):
+        rgb = "Unknown"
+        for chnk in self.chunks:
+            if chnk[0] == b'sRGB':
+                rgb = "XD"
+                rendering_indent = chnk[1]
+                return {
+                    b'\x00': "0: Perceptual",
+                    b'\x01': "1: Relative colorimetric",
+                    b'\x02': "2: Saturation",
+                    b'\x03': "Absolute colorimetric",
+                }[rendering_indent]
+        return rgb
 
 def open_png(filepath):
     example = Png(filepath)
@@ -118,8 +138,10 @@ def open_png(filepath):
         example.read_all_chunks()
         Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
         image = example.parse_IDAT(Height, Width)
+        Gamma = example.parse_gAMA()
+        SRGB = example.parse_sRGB()
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
     plt.imshow(np.array(image).reshape((Height, Width, 4)))
-    return fig, Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method
+    return fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, Compression_method, Filter_method, Interlace_method
