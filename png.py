@@ -129,6 +129,7 @@ class Png:
                         ("Blue X:", int.from_bytes(chnk[1][12:16], "big")), ("Blue Y:", int.from_bytes(chnk[1][12:16], "big"))]
         return chrm
 
+
     def parse_sRGB(self):
         rgb = "Unknown"
         for chnk in self.chunks:
@@ -157,6 +158,18 @@ class Png:
                 return int.from_bytes(ppuX, "big"), int.from_bytes(ppuY, "big"), unit
         return phys
 
+    def parse_tIME(self):
+        time = "Unknown"
+        for chnk in self.chunks:
+            if chnk[0] == b'tIME':
+                month = int.from_bytes(chnk[1][2:3], "big")
+                if month < 10:
+                    month = "0" + str(month)
+                time = f'{int.from_bytes(chnk[1][3:4], "big")}.{month}.{int.from_bytes(chnk[1][:2], "big")} ' \
+                       f'time:{int.from_bytes(chnk[1][4:5], "big")}:{int.from_bytes(chnk[1][5:6], "big")}:{int.from_bytes(chnk[1][6:7], "big")}'
+        return time
+
+
 def open_png(filepath):
     example = Png(filepath)
     if example.check_signature():
@@ -167,8 +180,9 @@ def open_png(filepath):
         SRGB = example.parse_sRGB()
         PHYs = example.parse_pHYs()
         CHRM = example.parse_cHRM()
+        TIME = example.parse_tIME()
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
     plt.imshow(np.array(image).reshape((Height, Width, 4)))
-    return fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, Compression_method, Filter_method, Interlace_method
+    return fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, Compression_method, Filter_method, Interlace_method
