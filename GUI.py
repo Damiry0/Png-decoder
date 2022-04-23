@@ -31,9 +31,9 @@ while True:
     if event == sg.WIN_CLOSED or event == "Exit":
         break
     elif event == "Decode":
-        fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, Compression_method, Filter_method, Interlace_method = png.open_png(
+        fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, Compression_method, Filter_method, Interlace_method = png.open_png(
             values["-IN-"])
         fig_canvas_agg = draw_figure(window['-CANVAS-'].TKCanvas, fig)
-        window['OUTPUT'].update( f"Width:{Width} Height:{Height} Bit_depth:{Bit_depth} Color_type:{Color_type} Gamma:{Gamma} sRGB:{SRGB} pHYs:{PHYs}",visible=True)
+        window['OUTPUT'].update( f"Width:{Width} Height:{Height} Bit_depth:{Bit_depth} Color_type:{Color_type} Gamma:{Gamma} cHRM:{CHRM} sRGB:{SRGB} pHYs:{PHYs}",visible=True)
 
 window.close()

@@ -119,6 +119,16 @@ class Png:
                 gamma = str(g/100000)
         return gamma
 
+    def parse_cHRM(self):
+        chrm = "Unknown"
+        for chnk in self.chunks:
+            if chnk[0] == b'cHRM':
+                chrm = [('WP X:', int.from_bytes(chnk[1][:4], "big")), ('WP Y:', int.from_bytes(chnk[1][4:8], "big")),
+                        ("Red X:", int.from_bytes(chnk[1][8:12], "big")), ("Red Y:", int.from_bytes(chnk[1][12:16], "big")),
+                        ("Green X:", int.from_bytes(chnk[1][12:16], "big")), ("Green Y:", int.from_bytes(chnk[1][12:16], "big")),
+                        ("Blue X:", int.from_bytes(chnk[1][12:16], "big")), ("Blue Y:", int.from_bytes(chnk[1][12:16], "big"))]
+        return chrm
+
     def parse_sRGB(self):
         rgb = "Unknown"
         for chnk in self.chunks:
@@ -156,8 +166,9 @@ def open_png(filepath):
         Gamma = example.parse_gAMA()
         SRGB = example.parse_sRGB()
         PHYs = example.parse_pHYs()
+        CHRM = example.parse_cHRM()
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
     plt.imshow(np.array(image).reshape((Height, Width, 4)))
-    return fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, Compression_method, Filter_method, Interlace_method
+    return fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, Compression_method, Filter_method, Interlace_method
