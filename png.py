@@ -115,7 +115,8 @@ class Png:
         gamma = "Unknown"
         for chnk in self.chunks:
             if chnk[0] == b'gAMA':
-                gamma = "XD"
+                g = int.from_bytes(chnk[1], "big")
+                gamma = str(g/100000)
         return gamma
 
     def parse_sRGB(self):
