@@ -169,6 +169,42 @@ class Png:
                        f'time:{int.from_bytes(chnk[1][4:5], "big")}:{int.from_bytes(chnk[1][5:6], "big")}:{int.from_bytes(chnk[1][6:7], "big")}'
         return time
 
+    def parse_tEXt(self):
+        text = "Unknown"
+        data = []
+        list_data = []
+        key = []
+        value = []
+        word = ""
+        checker = True
+        for chnk in self.chunks:
+            if chnk[0] == b'tEXt':
+                data += chnk
+        if data is not None:
+            text = data
+            for item in data:
+                if item == b'tEXt':
+                    data.remove(item)
+            for item in data:
+                for letter in item:
+                    if chr(letter) is chr(0):
+                        list_data.append(word)
+                        word = ""
+                    else:
+                        word += chr(letter)
+                list_data.append(word)
+                word = ""
+            for item in list_data:
+                if checker:
+                    key.append(item)
+                    checker = False
+                else:
+                    value.append(item)
+                    checker = True
+            text_dict = dict(zip(key, value))
+            #print(text_dict)
+        return text_dict
+
 
 def open_png(filepath):
     example = Png(filepath)
@@ -181,8 +217,9 @@ def open_png(filepath):
         PHYs = example.parse_pHYs()
         CHRM = example.parse_cHRM()
         TIME = example.parse_tIME()
+        TEXT = example.parse_tEXt()
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
     plt.imshow(np.array(image).reshape((Height, Width, 4)))
-    return fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, Compression_method, Filter_method, Interlace_method
+    return fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method
