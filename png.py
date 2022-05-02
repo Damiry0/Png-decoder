@@ -208,7 +208,13 @@ class Png:
             # print(text_dict)
         return text_dict
 
-    # def parse_eXIF(self):
+    def parse_PLTE(self):
+        for chnk in self.chunks:
+            if chnk[0] == b'PLTE':
+                red = int.from_bytes(chnk[1][0], "big")
+                green = int.from_bytes(chnk[1][1], "big")
+                blue = int.from_bytes(chnk[1][2], "big")
+                return (red, green, blue)
 
 
 def open_png(filepath):
@@ -223,6 +229,7 @@ def open_png(filepath):
         CHRM = example.parse_cHRM()
         TIME = example.parse_tIME()
         TEXT = example.parse_tEXt()
+        PLTE = example.parse_PLTE()
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
