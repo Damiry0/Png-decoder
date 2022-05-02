@@ -33,6 +33,7 @@ class Png:
             if chunk_type == b'IEND':
                 self.merge_idat_chunks()
                 break
+        return [row[0] for row in self.chunks]
 
     def merge_idat_chunks(self):
         IDAT_data = b''.join(chunk_data for chunk_type, chunk_data in self.chunks if chunk_type == b'IDAT')
@@ -116,7 +117,7 @@ class Png:
         for chnk in self.chunks:
             if chnk[0] == b'gAMA':
                 g = int.from_bytes(chnk[1], "big")
-                gamma = str(g/100000)
+                gamma = str(g / 100000)
         return gamma
 
     def parse_cHRM(self):
@@ -124,11 +125,13 @@ class Png:
         for chnk in self.chunks:
             if chnk[0] == b'cHRM':
                 chrm = [('WP X:', int.from_bytes(chnk[1][:4], "big")), ('WP Y:', int.from_bytes(chnk[1][4:8], "big")),
-                        ("Red X:", int.from_bytes(chnk[1][8:12], "big")), ("Red Y:", int.from_bytes(chnk[1][12:16], "big")),
-                        ("Green X:", int.from_bytes(chnk[1][12:16], "big")), ("Green Y:", int.from_bytes(chnk[1][12:16], "big")),
-                        ("Blue X:", int.from_bytes(chnk[1][12:16], "big")), ("Blue Y:", int.from_bytes(chnk[1][12:16], "big"))]
+                        ("Red X:", int.from_bytes(chnk[1][8:12], "big")),
+                        ("Red Y:", int.from_bytes(chnk[1][12:16], "big")),
+                        ("Green X:", int.from_bytes(chnk[1][12:16], "big")),
+                        ("Green Y:", int.from_bytes(chnk[1][12:16], "big")),
+                        ("Blue X:", int.from_bytes(chnk[1][12:16], "big")),
+                        ("Blue Y:", int.from_bytes(chnk[1][12:16], "big"))]
         return chrm
-
 
     def parse_sRGB(self):
         rgb = "Unknown"
@@ -151,7 +154,7 @@ class Png:
                 ppuX = chnk[1][:4]
                 ppuY = chnk[1][4:8]
                 unit_b = chnk[1][-1:]
-                if(unit_b):
+                if (unit_b):
                     unit = "meter"
                 else:
                     unit = "unknown"
@@ -202,14 +205,16 @@ class Png:
                     value.append(item)
                     checker = True
             text_dict = dict(zip(key, value))
-            #print(text_dict)
+            # print(text_dict)
         return text_dict
+
+    # def parse_eXIF(self):
 
 
 def open_png(filepath):
     example = Png(filepath)
     if example.check_signature():
-        example.read_all_chunks()
+        chunk_names = example.read_all_chunks()
         Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
         image = example.parse_IDAT(Height, Width)
         Gamma = example.parse_gAMA()
@@ -222,4 +227,4 @@ def open_png(filepath):
         raise Exception("Wrong Filetype")
     fig = plt.figure()
     plt.imshow(np.array(image).reshape((Height, Width, 4)))
-    return fig, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method
+    return fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method
