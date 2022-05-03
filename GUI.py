@@ -5,6 +5,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import PySimpleGUI as sg
 import matplotlib
 import png
+import fourier
 
 matplotlib.use('TkAgg')
 sg.theme('DarkAmber')
@@ -22,7 +23,7 @@ List_combo = []
 layout = [[sg.Text("Choose a file: "),
            sg.FileBrowse(key="-IN-")],
 
-          [sg.Canvas(key='-CANVAS-'),
+          [sg.Canvas(key='fourier'), sg.Canvas(key='-CANVAS-'),
            sg.Multiline("", size=(20, 15), key='OUTPUT', visible=False, no_scrollbar=True)],
 
           [sg.Button('Decode'),
@@ -46,6 +47,7 @@ while True:
         fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks = png.open_png(
             values["-IN-"])
         fig_canvas_agg = draw_figure(window['-CANVAS-'].TKCanvas, fig)
+        fig_canvas_fourier = draw_figure(window['fourier'].TKCanvas, fourier.show_plots(values["-IN-"]))
         window['OUTPUT'].update(
             f"Width:{Width}px Height:{Height}px Bit_depth:{Bit_depth} Color_type:{Color_type} Gamma:{Gamma} cHRM:{CHRM} sRGB:{SRGB} pHYs:{PHYs} date:{PHYs} text:{TEXT}",
             visible=True)
