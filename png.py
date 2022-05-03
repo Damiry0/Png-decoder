@@ -1,3 +1,4 @@
+import binascii
 import zlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -6,6 +7,7 @@ import numpy as np
 class Png:
     LENGTH_OF_BYTES = 4
     STEP = 0
+    PNG_SIGNATURE = b'\x89PNG\r\n\x1a\n'
 
     def __init__(self, filepath):
         self.file = open(filepath, 'rb')
@@ -13,7 +15,7 @@ class Png:
         self.output_image = []
 
     def check_signature(self):
-        return self.file.read(8) == b'\x89PNG\r\n\x1a\n'  # png signature in binary
+        return self.file.read(8) == self.PNG_SIGNATURE  # png signature in binary
 
     def read_chunks(self):
         chunk_length = self.file.read(4)
@@ -54,13 +56,7 @@ class Png:
             interlace_method = self.chunks[0][1][12]
             return width, height, bit_depth, color_type, compression_method, filter_method, interlace_method
         else:
-            raise Exception("IHDR should be the second chunk")
-
-    # def parse_PLTE(self, chunk):
-    #     red = chunk[1][0]
-    #     green = chunk[1][0]
-    #     blue = chunk[1][2]
-    #     return red, green, blue
+            raise Exception("IHDR should be the first chunk")
 
     def paeth_predictor(self, a, b, c):
         p = a + b - c  # a= left, b= above, c= right
@@ -90,25 +86,25 @@ class Png:
         i = 0
         idat_chunk = [(x, y) for x, y in self.chunks if x == b"IDAT"][0][1]
         self.STEP = self.LENGTH_OF_BYTES * width
-        for j in range(height):
+        for r in range(height):
             filter_type = idat_chunk[i]
             i += 1
-            for k in range(self.STEP):
+            for c in range(self.STEP):
                 Filter = idat_chunk[i]
                 i += 1
                 if filter_type == 0:
                     Recon_x = Filter
                 elif filter_type == 1:
-                    Recon_x = Filter + self.unfilter_sub(j, k)
+                    Recon_x = Filter + self.unfilter_sub(r, c)
                 elif filter_type == 2:
-                    Recon_x = Filter + self.unfilter_up(j, k)
+                    Recon_x = Filter + self.unfilter_up(r, c)
                 elif filter_type == 3:
-                    Recon_x = Filter + (self.unfilter_sub(j, k) + self.unfilter_up(j, k)) // 2
+                    Recon_x = Filter + (self.unfilter_sub(r, c) + self.unfilter_up(r, c)) // 2
                 elif filter_type == 4:
-                    Recon_x = Filter + self.paeth_predictor(self.unfilter_sub(j, k), self.unfilter_up(j, k),
-                                                            self.unfilter_average(j, k))
+                    Recon_x = Filter + self.paeth_predictor(self.unfilter_sub(r, c), self.unfilter_up(r, c),
+                                                            self.unfilter_average(r, c))
                 else:
-                    raise Exception('unknown filter type: ' + str(filter_type))
+                    return self.output_image
                 self.output_image.append(Recon_x & 0xff)  # truncation to byte
         return self.output_image
 
@@ -124,7 +120,8 @@ class Png:
         chrm = "Unknown"
         for chnk in self.chunks:
             if chnk[0] == b'cHRM':
-                chrm = [('WP X:', int.from_bytes(chnk[1][:4], "big")), ('WP Y:', int.from_bytes(chnk[1][4:8], "big")),
+                chrm = [('WP X:', int.from_bytes(chnk[1][:4], "big")),
+                        ('WP Y:', int.from_bytes(chnk[1][4:8], "big")),
                         ("Red X:", int.from_bytes(chnk[1][8:12], "big")),
                         ("Red Y:", int.from_bytes(chnk[1][12:16], "big")),
                         ("Green X:", int.from_bytes(chnk[1][12:16], "big")),
@@ -208,13 +205,17 @@ class Png:
             # print(text_dict)
         return text_dict
 
-    def parse_PLTE(self):
-        for chnk in self.chunks:
-            if chnk[0] == b'PLTE':
-                red = int.from_bytes(chnk[1][0], "big")
-                green = int.from_bytes(chnk[1][1], "big")
-                blue = int.from_bytes(chnk[1][2], "big")
-                return (red, green, blue)
+    def anonymization(self):
+        chunks = [(x, y) for x, y in self.chunks if x.decode()[0].isupper()]
+        decoded_chunks = []
+        for (chunk_name, chunk_data) in chunks:
+            chunk_length = len(chunk_name).to_bytes(4, byteorder='big').hex()
+            check_sum = zlib.crc32(chunk_name + chunk_data).to_bytes(4, byteorder='big').hex()
+            decoded_chunks = decoded_chunks + [chunk_length] + [chunk_name.hex()] + [chunk_data.hex()] + [check_sum]
+        decoded_chunks = [self.PNG_SIGNATURE.hex()] + decoded_chunks
+        decoded_chunks = ''.join(map(str, decoded_chunks))
+        decoded_chunks = binascii.unhexlify(decoded_chunks)
+        return decoded_chunks
 
 
 def open_png(filepath):
@@ -229,9 +230,11 @@ def open_png(filepath):
         CHRM = example.parse_cHRM()
         TIME = example.parse_tIME()
         TEXT = example.parse_tEXt()
-        PLTE = example.parse_PLTE()
+        anomizated_chunks = example.anonymization()
+        print(1)
+        # PLTE = example.parse_PLTE()
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
     plt.imshow(np.array(image).reshape((Height, Width, 4)))
-    return fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method
+    return fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks
