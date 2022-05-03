@@ -110,6 +110,22 @@ class Png:
                 self.output_image.append(Recon_x & 0xff)  # truncation to byte
         return self.output_image
 
+    def parse_PLTE(self):
+        plte_palette = []
+        for chunk in self.chunks:
+            if chunk[0] == b'PLTE':
+                plte_len = len(chunk[1])
+                if plte_len % 3 != 0:
+                    raise Exception("PLTE chunk length must be divisible by 3.")
+                for i in range(0, plte_len, 3):
+                    pixel = chunk[1][i:i + 3]
+                    plte_palette.append((pixel[0], pixel[1], pixel[2]))
+        palette = np.array(plte_palette)
+        index = np.arange(256).reshape(16, 16)
+        plt.title("PLTE palette")
+        plt.imshow(palette[index])
+        plt.show()
+
     def parse_gAMA(self):
         gamma = "Unknown"
         for chnk in self.chunks:
@@ -236,7 +252,7 @@ def open_png(filepath):
         TEXT = example.parse_tEXt()
         anomizated_chunks = example.anonymization()
         print(1)
-        # PLTE = example.parse_PLTE()
+        PLTE = example.parse_PLTE()
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
