@@ -12,6 +12,7 @@ class Png:
     def __init__(self, filepath):
         self.file = open(filepath, 'rb')
         self.chunks = []
+        self.original_idat = []
         self.output_image = []
 
     def check_signature(self):
@@ -39,6 +40,7 @@ class Png:
 
     def merge_idat_chunks(self):
         IDAT_data = b''.join(chunk_data for chunk_type, chunk_data in self.chunks if chunk_type == b'IDAT')
+        self.original_idat = IDAT_data
         IDAT_data = zlib.decompress(IDAT_data)
         self.chunks = [item for item in self.chunks if item[0] != b'IDAT']
         self.chunks.insert(-1, (b'IDAT', IDAT_data))
@@ -209,8 +211,10 @@ class Png:
         chunks = [(x, y) for x, y in self.chunks if x.decode()[0].isupper()]
         decoded_chunks = []
         for (chunk_name, chunk_data) in chunks:
-            chunk_length = len(chunk_name).to_bytes(4, byteorder='big').hex()
+            chunk_length = len(chunk_data).to_bytes(4, byteorder='big').hex()
             check_sum = zlib.crc32(chunk_name + chunk_data).to_bytes(4, byteorder='big').hex()
+            if chunk_name == b'IDAT':
+                chunk_data = self.original_idat
             decoded_chunks = decoded_chunks + [chunk_length] + [chunk_name.hex()] + [chunk_data.hex()] + [check_sum]
         decoded_chunks = [self.PNG_SIGNATURE.hex()] + decoded_chunks
         decoded_chunks = ''.join(map(str, decoded_chunks))
