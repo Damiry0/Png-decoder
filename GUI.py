@@ -1,8 +1,6 @@
-from matplotlib.ticker import NullFormatter
-import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import PySimpleGUI as sg
+import matplotlib.image as img
 import matplotlib
 import png
 import fourier
@@ -23,7 +21,7 @@ List_combo = []
 layout = [[sg.Text("Choose a file: "),
            sg.FileBrowse(key="-IN-")],
 
-          [sg.Canvas(key='fourier'), sg.Canvas(key='-CANVAS-'),
+          [sg.Canvas(key='palette'), sg.Canvas(key='fourier'), sg.Canvas(key='-CANVAS-'),
            sg.Multiline("", size=(20, 15), key='OUTPUT', visible=False, no_scrollbar=True)],
 
           [sg.Button('Decode'),
@@ -37,14 +35,14 @@ layout = [[sg.Text("Choose a file: "),
 window = sg.Window('Png-decoder', layout, finalize=True,
                    element_justification='center', font='Helvetica 18')
 
-fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks = object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object()
+fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE = object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object()
 
 while True:
     event, values = window.read()
     if event == sg.WIN_CLOSED or event == "Exit":
         break
     elif event == "Decode":
-        fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks = png.open_png(
+        fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE = png.open_png(
             values["-IN-"])
         fig_canvas_agg = draw_figure(window['-CANVAS-'].TKCanvas, fig)
         fig_canvas_fourier = draw_figure(window['fourier'].TKCanvas, fourier.show_plots(values["-IN-"]))
@@ -61,6 +59,10 @@ while True:
             window['OUTPUT'].update(f"Width:{Width} Height:{Height} Bit_depth:{Bit_depth} Color_type:{Color_type}")
 
         elif values['chunk_names_combo'] == b"gAMA":
+            window['OUTPUT'].update(f"Gamma:{Gamma}", visible=True)
+
+        elif values['chunk_names_combo'] == b"PLTE":
+            draw_figure(window['palette'].TKCanvas, PLTE)
             window['OUTPUT'].update(f"Gamma:{Gamma}", visible=True)
 
         elif values['chunk_names_combo'] == b"cHRM":

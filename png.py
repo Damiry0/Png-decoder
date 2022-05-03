@@ -1,7 +1,9 @@
 import binascii
 import zlib
 import matplotlib.pyplot as plt
+import matplotlib.image as img
 import numpy as np
+from PIL import Image
 
 
 class Png:
@@ -120,11 +122,12 @@ class Png:
                 for i in range(0, plte_len, 3):
                     pixel = chunk[1][i:i + 3]
                     plte_palette.append((pixel[0], pixel[1], pixel[2]))
-        palette = np.array(plte_palette)
-        index = np.arange(256).reshape(16, 16)
-        plt.title("PLTE palette")
-        plt.imshow(palette[index])
-        plt.show()
+                palette = np.array(plte_palette)
+                index = np.arange(256).reshape(16, 16)
+                fig = plt.figure()
+                plt.title("PLTE palette")
+                plt.imshow(palette[index])
+                return fig
 
     def parse_gAMA(self):
         gamma = "Unknown"
@@ -244,6 +247,7 @@ def open_png(filepath):
         chunk_names = example.read_all_chunks()
         Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
         image = example.parse_IDAT(Height, Width)
+        PLTE = example.parse_PLTE()
         Gamma = example.parse_gAMA()
         SRGB = example.parse_sRGB()
         PHYs = example.parse_pHYs()
@@ -251,10 +255,9 @@ def open_png(filepath):
         TIME = example.parse_tIME()
         TEXT = example.parse_tEXt()
         anomizated_chunks = example.anonymization()
-        print(1)
-        PLTE = example.parse_PLTE()
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
-    plt.imshow(np.array(image).reshape((Height, Width, 4)))
-    return fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks
+    image = img.imread(filepath)
+    plt.imshow(image)
+    return fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE
