@@ -28,9 +28,9 @@ layout = [[sg.Text("Choose a file: "),
           [sg.Button('Decode'),
            sg.InputCombo(List_combo, key='chunk_names_combo', size=(5, 5), visible=False, enable_events=True)],
 
-          [sg.InputText(key='File to Save', default_text='filename', enable_events=True),
+          [sg.InputText(key='File to Save', default_text='filename', enable_events=True, visible=False),
            sg.InputText(key='Save As', do_not_clear=False, enable_events=True, visible=False),
-           sg.FileSaveAs(initial_folder='/tmp', )]]
+           sg.FileSaveAs(key='saveButton', initial_folder='/tmp', visible=False)]]
 
 # create the form and show it without the plot
 window = sg.Window('Png-decoder', layout, finalize=True,
@@ -51,6 +51,8 @@ while True:
             visible=True)
         List_combo = chunk_names
         window['chunk_names_combo'].update(values=List_combo, visible=True)
+        window['File to Save'].update(visible=True)
+        window['saveButton'].update(visible=True)
     elif event == 'chunk_names_combo':
 
         if values['chunk_names_combo'] == b"IHDR":
