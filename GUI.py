@@ -47,7 +47,7 @@ while True:
         fig_canvas_agg = draw_figure(window['-CANVAS-'].TKCanvas, fig)
         fig_canvas_fourier = draw_figure(window['fourier'].TKCanvas, fourier.show_plots(values["-IN-"]))
         window['OUTPUT'].update(
-            f"Width:{Width}px Height:{Height}px Bit_depth:{Bit_depth} Color_type:{Color_type} Gamma:{Gamma} cHRM:{CHRM} sRGB:{SRGB} pHYs:{PHYs} date:{PHYs} text:{TEXT}",
+            f"",
             visible=True)
         List_combo = chunk_names
         window['chunk_names_combo'].update(values=List_combo, visible=True)
@@ -56,7 +56,25 @@ while True:
     elif event == 'chunk_names_combo':
 
         if values['chunk_names_combo'] == b"IHDR":
-            window['OUTPUT'].update(f"Width:{Width} Height:{Height} Bit_depth:{Bit_depth} Color_type:{Color_type}")
+            match Color_type:
+                case 0:
+                    Color_type = "Each pixel is a grayscale sample."
+                case 2:
+                    Color_type = "Each pixel is an R,G,B triple."
+                case 3:
+                    Color_type = "Each pixel is a palette index a PLTE chunk must appear."
+                case 4:
+                    Color_type = "Each pixel is a grayscale sample, followed by an alpha sample."
+                case 6:
+                    Color_type = "Each pixel is an R,G,B triple, followed by an alpha sample."
+            match Interlace_method:
+                case 0:
+                    Interlace_method = "no interlace"
+                case 1:
+                    Interlace_method = "Adam7 interlace"
+
+            window['OUTPUT'].update(
+                f"Width:{Width}px"f"Height:{Height}px"f"Bit_depth:{Bit_depth}"f"Color_type:{Color_type}"f"Interlace Method:{Interlace_method}")
 
         elif values['chunk_names_combo'] == b"gAMA":
             window['OUTPUT'].update(f"Gamma:{Gamma}", visible=True)
@@ -66,6 +84,9 @@ while True:
             window['OUTPUT'].update(f"Gamma:{Gamma}", visible=True)
 
         elif values['chunk_names_combo'] == b"cHRM":
+            CHRM = [i for sub in CHRM for i in sub]
+            CHRM = ''.join(str(CHRM).split("'"))
+            CHRM = ''.join(str(CHRM).split(","))
             window['OUTPUT'].update(f"cHRM:{CHRM}", visible=True)
 
         elif values['chunk_names_combo'] == b"sRGB":

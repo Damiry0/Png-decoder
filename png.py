@@ -186,8 +186,8 @@ class Png:
                 month = int.from_bytes(chnk[1][2:3], "big")
                 if month < 10:
                     month = "0" + str(month)
-                time = f'{int.from_bytes(chnk[1][3:4], "big")}.{month}.{int.from_bytes(chnk[1][:2], "big")} ' \
-                       f'time:{int.from_bytes(chnk[1][4:5], "big")}:{int.from_bytes(chnk[1][5:6], "big")}:{int.from_bytes(chnk[1][6:7], "big")}'
+                time = f'Date:{int.from_bytes(chnk[1][3:4], "big")}.{month}.{int.from_bytes(chnk[1][:2], "big")} ' \
+                       f'Time:{int.from_bytes(chnk[1][4:5], "big")}:{int.from_bytes(chnk[1][5:6], "big")}:{int.from_bytes(chnk[1][6:7], "big")}'
         return time
 
     def parse_tEXt(self):
