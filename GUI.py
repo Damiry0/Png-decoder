@@ -22,7 +22,8 @@ layout = [[sg.Text("Choose a file: "),
            sg.FileBrowse(key="-IN-")],
 
           [sg.Canvas(key='palette'), sg.Canvas(key='fourier'), sg.Canvas(key='-CANVAS-'),
-           sg.Multiline("", size=(20, 15), key='OUTPUT', visible=False, no_scrollbar=True)],
+           sg.Multiline("", size=(20, 15), key='OUTPUT', visible=False, no_scrollbar=False, autoscroll=True,
+                        horizontal_scroll=True, auto_size_text=True)],
 
           [sg.Button('Decode'),
            sg.InputCombo(List_combo, key='chunk_names_combo', size=(5, 5), visible=False, enable_events=True)],
@@ -108,7 +109,7 @@ while True:
             window['OUTPUT'].update(f"\n".join("{}\t{}".format(k, v) for k, v in TEXT.items()), visible=True)
 
         elif values['chunk_names_combo'] == b"iTXt":
-            window['OUTPUT'].update(f"\n".join("{}\t{}".format(k, v) for k, v in ITXT.items()), visible=True)
+            window['OUTPUT'].update(f"iTXt: \n {ITXT}", visible=True)
         else:
             window['OUTPUT'].update(f"error, chunk not supported")
     elif event == 'Save As':

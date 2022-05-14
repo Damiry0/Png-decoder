@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 import matplotlib.image as img
 import numpy as np
 import xml.dom.minidom as xdm
-#import xml.etree.ElementTree as ET
-#import xmltodict
+import yaml
+import xmltodict as xmltodict
 
 
 class Png:
@@ -227,7 +227,6 @@ class Png:
                     value.append(item)
                     checker = True
             text_dict = dict(zip(key, value))
-            # print(text_dict)
         return text_dict
 
     def parse_iTXt(self):
@@ -251,13 +250,11 @@ class Png:
                 if s.startswith("b'XML:com.adobe.xmp"):
                     s = s.removeprefix("b'XML:com.adobe.xmp")
                     if s.startswith("\\x00\\x00\\x00\\x00\\x00"):
-                        print("YAAAAA")
                         s = s[20:-1]
                     print("XD", s)
                     dom = xdm.parseString(s)
                     prett = dom.toprettyxml()
                     text_dict = prett
-                    print(prett) # usunac - tylko do testow; xml dziala dla pliku iTXt_test
                     return text_dict
                 else:
                     for letter in item:
@@ -276,9 +273,7 @@ class Png:
                     value.append(item)
                     checker = True
             text_dict = dict(zip(key, value))
-        return text_dict
-
-
+            return text_dict
 
     def anonymization(self):
         chunks = [(x, y) for x, y in self.chunks if x.decode()[0].isupper()]
@@ -309,6 +304,7 @@ def open_png(filepath):
         TIME = example.parse_tIME()
         TEXT = example.parse_tEXt()
         ITXT = example.parse_iTXt()
+        ITXT = yaml.dump(xmltodict.parse(ITXT), default_flow_style=False)
         anomizated_chunks = example.anonymization()
     else:
         raise Exception("Wrong Filetype")
