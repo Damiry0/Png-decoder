@@ -35,14 +35,14 @@ layout = [[sg.Text("Choose a file: "),
 window = sg.Window('Png-decoder', layout, finalize=True,
                    element_justification='center', font='Helvetica 18')
 
-fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE = object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object()
+fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, ITXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE = object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object()
 
 while True:
     event, values = window.read()
     if event == sg.WIN_CLOSED or event == "Exit":
         break
     elif event == "Decode":
-        fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE = png.open_png(
+        fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, ITXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE = png.open_png(
             values["-IN-"])
         fig_canvas_agg = draw_figure(window['-CANVAS-'].TKCanvas, fig)
         fig_canvas_fourier = draw_figure(window['fourier'].TKCanvas, fourier.show_plots(values["-IN-"]))
@@ -107,6 +107,8 @@ while True:
         elif values['chunk_names_combo'] == b"tEXt":
             window['OUTPUT'].update(f"\n".join("{}\t{}".format(k, v) for k, v in TEXT.items()), visible=True)
 
+        elif values['chunk_names_combo'] == b"iTXt":
+            window['OUTPUT'].update(f"\n".join("{}\t{}".format(k, v) for k, v in ITXT.items()), visible=True)
         else:
             window['OUTPUT'].update(f"error, chunk not supported")
     elif event == 'Save As':

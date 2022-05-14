@@ -3,7 +3,9 @@ import zlib
 import matplotlib.pyplot as plt
 import matplotlib.image as img
 import numpy as np
-from PIL import Image
+import xml.dom.minidom as xdm
+#import xml.etree.ElementTree as ET
+#import xmltodict
 
 
 class Png:
@@ -206,6 +208,8 @@ class Png:
             for item in data:
                 if item == b'tEXt':
                     data.remove(item)
+            for i in data:
+                print(i)
             for item in data:
                 for letter in item:
                     if chr(letter) is chr(0):
@@ -225,6 +229,56 @@ class Png:
             text_dict = dict(zip(key, value))
             # print(text_dict)
         return text_dict
+
+    def parse_iTXt(self):
+        text = "Unknown"
+        data = []
+        list_data = []
+        key = []
+        value = []
+        word = ""
+        checker = True
+        for chnk in self.chunks:
+            if chnk[0] == b'iTXt':
+                data += chnk
+        if data is not None:
+            text = data
+            for item in data:
+                if item == b'iTXt':
+                    data.remove(item)
+            for item in data:
+                s = str(item)
+                if s.startswith("b'XML:com.adobe.xmp"):
+                    s = s.removeprefix("b'XML:com.adobe.xmp")
+                    if s.startswith("\\x00\\x00\\x00\\x00\\x00"):
+                        print("YAAAAA")
+                        s = s[20:-1]
+                    print("XD", s)
+                    dom = xdm.parseString(s)
+                    prett = dom.toprettyxml()
+                    text_dict = prett
+                    print(prett) # usunac - tylko do testow; xml dziala dla pliku iTXt_test
+                    return text_dict
+                else:
+                    for letter in item:
+                        if chr(letter) is chr(0):
+                            list_data.append(word)
+                            word = ""
+                        else:
+                            word += chr(letter)
+                    list_data.append(word)
+                    word = ""
+            for item in list_data:
+                if checker:
+                    key.append(item)
+                    checker = False
+                else:
+                    value.append(item)
+                    checker = True
+            text_dict = dict(zip(key, value))
+        return text_dict
+
+
 
     def anonymization(self):
         chunks = [(x, y) for x, y in self.chunks if x.decode()[0].isupper()]
@@ -254,10 +308,11 @@ def open_png(filepath):
         CHRM = example.parse_cHRM()
         TIME = example.parse_tIME()
         TEXT = example.parse_tEXt()
+        ITXT = example.parse_iTXt()
         anomizated_chunks = example.anonymization()
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
     image = img.imread(filepath)
     plt.imshow(image)
-    return fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE
+    return fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, ITXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE

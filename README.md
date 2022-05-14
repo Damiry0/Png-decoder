@@ -8,6 +8,7 @@ Simple decoder of Png files. Supports all critical chunks and following ancillar
 * cHRM
 * tIME
 * tEXt
+* iTXt
 
 ## Screenshots
 
