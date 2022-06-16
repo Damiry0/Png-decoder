@@ -22,7 +22,8 @@ layout = [[sg.Text("Choose a file: "),
            sg.FileBrowse(key="-IN-")],
 
           [sg.Canvas(key='palette'), sg.Canvas(key='fourier'), sg.Canvas(key='-CANVAS-'),
-           sg.Multiline("", size=(20, 15), key='OUTPUT', visible=False, no_scrollbar=True)],
+           sg.Multiline("", size=(20, 15), key='OUTPUT', visible=False, no_scrollbar=False, autoscroll=True,
+                        horizontal_scroll=True, auto_size_text=True)],
 
           [sg.Button('Decode'),
            sg.InputCombo(List_combo, key='chunk_names_combo', size=(5, 5), visible=False, enable_events=True)],
@@ -35,19 +36,19 @@ layout = [[sg.Text("Choose a file: "),
 window = sg.Window('Png-decoder', layout, finalize=True,
                    element_justification='center', font='Helvetica 18')
 
-fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE = object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object()
+fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, ITXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE = object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object(), object()
 
 while True:
     event, values = window.read()
     if event == sg.WIN_CLOSED or event == "Exit":
         break
     elif event == "Decode":
-        fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE = png.open_png(
+        fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, ITXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE = png.open_png(
             values["-IN-"])
         fig_canvas_agg = draw_figure(window['-CANVAS-'].TKCanvas, fig)
         fig_canvas_fourier = draw_figure(window['fourier'].TKCanvas, fourier.show_plots(values["-IN-"]))
         window['OUTPUT'].update(
-            f"Width:{Width}px Height:{Height}px Bit_depth:{Bit_depth} Color_type:{Color_type} Gamma:{Gamma} cHRM:{CHRM} sRGB:{SRGB} pHYs:{PHYs} date:{PHYs} text:{TEXT}",
+            f"",
             visible=True)
         List_combo = chunk_names
         window['chunk_names_combo'].update(values=List_combo, visible=True)
@@ -56,7 +57,25 @@ while True:
     elif event == 'chunk_names_combo':
 
         if values['chunk_names_combo'] == b"IHDR":
-            window['OUTPUT'].update(f"Width:{Width} Height:{Height} Bit_depth:{Bit_depth} Color_type:{Color_type}")
+            match Color_type:
+                case 0:
+                    Color_type = "Each pixel is a grayscale sample."
+                case 2:
+                    Color_type = "Each pixel is an R,G,B triple."
+                case 3:
+                    Color_type = "Each pixel is a palette index a PLTE chunk must appear."
+                case 4:
+                    Color_type = "Each pixel is a grayscale sample, followed by an alpha sample."
+                case 6:
+                    Color_type = "Each pixel is an R,G,B triple, followed by an alpha sample."
+            match Interlace_method:
+                case 0:
+                    Interlace_method = "no interlace"
+                case 1:
+                    Interlace_method = "Adam7 interlace"
+
+            window['OUTPUT'].update(
+                f"Width:{Width}px"f"Height:{Height}px"f"Bit_depth:{Bit_depth}"f"Color_type:{Color_type}"f"Interlace Method:{Interlace_method}")
 
         elif values['chunk_names_combo'] == b"gAMA":
             window['OUTPUT'].update(f"Gamma:{Gamma}", visible=True)
@@ -66,6 +85,9 @@ while True:
             window['OUTPUT'].update(f"Gamma:{Gamma}", visible=True)
 
         elif values['chunk_names_combo'] == b"cHRM":
+            CHRM = [i for sub in CHRM for i in sub]
+            CHRM = ''.join(str(CHRM).split("'"))
+            CHRM = ''.join(str(CHRM).split(","))
             window['OUTPUT'].update(f"cHRM:{CHRM}", visible=True)
 
         elif values['chunk_names_combo'] == b"sRGB":
@@ -86,6 +108,8 @@ while True:
         elif values['chunk_names_combo'] == b"tEXt":
             window['OUTPUT'].update(f"\n".join("{}\t{}".format(k, v) for k, v in TEXT.items()), visible=True)
 
+        elif values['chunk_names_combo'] == b"iTXt":
+            window['OUTPUT'].update(f"iTXt: \n {ITXT}", visible=True)
         else:
             window['OUTPUT'].update(f"error, chunk not supported")
     elif event == 'Save As':
