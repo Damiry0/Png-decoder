@@ -1,19 +1,19 @@
 import random
 
 
-
 class RSA:
-    def __init__(self,bits):
-        self.p=self.generatePrimeNumber(bits)
-        self.q=self.generatePrimeNumber(bits)
-        self.n=self.p * self.q
-        self.euler_totient= (self.p-1)*(self.q-1)
-        self.e = self.calculate_e(self.p,self.q)
-        self.d= self.e^-1 % self.euler_totient
-        self.public_key= (self.n,self.e)
-        self.private_key = (self.n,self.d)
+    def __init__(self, bits):
+        self.p = self.generatePrimeNumber(bits)
+        self.q = self.generatePrimeNumber(bits)
+        self.n = self.p * self.q
+        self.euler_totient = (self.p - 1) * (self.q - 1)
+        self.e = self.calculate_e(self.p, self.q)
+        self.d = self.e ^ -1 % self.euler_totient
+        self.public_key = (self.n, self.e)
+        self.private_key = (self.n, self.d)
+        self.key_size = bits
 
-    def generatePrimeNumber(self,bits):
+    def generatePrimeNumber(self, bits):
         while True:
             number = self.nRandomNumber(bits)
             if not self.isMillerRabinPassed(number):
@@ -21,12 +21,12 @@ class RSA:
             else:
                 return number
 
-    def nRandomNumber(self,n):
+    def nRandomNumber(self, n):
         # uses os.urandom() which is fit for cryptography random number generation
         return random.SystemRandom().randint(2 ** (n - 1) + 1, 2 ** n - 1)
 
-
-    def isMillerRabinPassed(self,mrc):
+    @staticmethod
+    def isMillerRabinPassed(mrc):
         # Run 20 iterations of Rabin Miller Primality test
         maxDivisionsByTwo = 0
         ec = mrc - 1
@@ -51,18 +51,35 @@ class RSA:
                 return False
         return True
 
-
-    def calculate_e(self,p, q):
-         phi = (p-1)*(q-1)
-         if phi >65537: return 65537 #2^16+1 prime number
-         else:
-            e = phi -1
+    def calculate_e(self, p, q):
+        phi = (p - 1) * (q - 1)
+        if phi > 65537:
+            return 65537  # 2^16+1 prime number
+        else:
+            e = phi - 1
             while True:
                 if self.isMillerRabinPassed(e): return e
                 e = e - 2
 
+    def encrypt_ecb(self, raw_idat_data):
+        encrypted_data = []
+        step = self.key_size-1
+        for i in range(0,len(raw_idat_data),step):
+            raw_idat_data_block = bytes(raw_idat_data[i:i+step])
+            int_idat_data_block = int.from_bytes(raw_idat_data_block, byteorder="big")
+            encrypted_data.append(pow(int_idat_data_block,self.public_key[1]))
+        return encrypted_data
+
+
+
+
+
+
+    # def decrypt_ecb(self):
+
+
 
 if __name__ == '__main__':
-    randomRsa = RSA(128)
+    randomRsa = RSA(256)
     print(f"public key = {randomRsa.public_key}")
     print(f"priavte key = {randomRsa.private_key}")

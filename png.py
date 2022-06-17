@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as img
 import numpy as np
 import xml.dom.minidom as xdm
-import yaml
-import xmltodict as xmltodict
+import rsa
 
 
 class Png:
@@ -304,8 +303,10 @@ def open_png(filepath):
         TIME = example.parse_tIME()
         TEXT = example.parse_tEXt()
         ITXT = example.parse_iTXt()
-        ITXT = yaml.dump(xmltodict.parse(ITXT), default_flow_style=False)
+       # ITXT = yaml.dump(xmltodict.parse(ITXT), default_flow_style=False)
         anomizated_chunks = example.anonymization()
+        encryption = rsa.RSA(128)
+        test= encryption.encrypt_ecb(example.original_idat)
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
