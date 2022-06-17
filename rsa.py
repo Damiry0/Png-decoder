@@ -1,8 +1,9 @@
 import random
 
+
 def nRandomNumber(n):
     # uses os.urandom() which is fit for cryptography random number generation
-    return random.SystemRandom().randint(2**(n-1)+1, 2**n-1)
+    return random.SystemRandom().randint(2 ** (n - 1) + 1, 2 ** n - 1)
 
 
 def isMillerRabinPassed(mrc):
@@ -30,6 +31,16 @@ def isMillerRabinPassed(mrc):
             return False
     return True
 
+def calculate_e(p, q):
+     phi = (p-1)*(q-1)
+     if phi >65537: return 65537 #2^16+1 prime number
+     else:
+        e = phi -1
+        while True:
+            if isMillerRabinPassed(e): return e
+            e = e - 2
+
+
 if __name__ == '__main__':
     while True:
         n = 128
@@ -40,4 +51,14 @@ if __name__ == '__main__':
         else:
             print(n, "bit prime is: \n", p)
             print(n, "bit prime is: \n", q)
+            m = p * q
+            euler_totient = (p-1)*(q-1)
+            print(euler_totient)
+            e=calculate_e(p,q)
+            d=e^-1 % euler_totient
+            public_key = (m,e)
+            private_key = (m,d)
+            print(f"public key={m},{e}")
+            print(f"private key={m},{d}")
+
             break
