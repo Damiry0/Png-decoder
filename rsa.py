@@ -61,22 +61,23 @@ class RSA:
                 if self.isMillerRabinPassed(e): return e
                 e = e - 2
 
-    # def encrypt_ecb(self, raw_idat_data):
-    #     encrypted_data = []
-    #     step = 8
-    #     for i in range(0, len(raw_idat_data), step):
-    #         # if len(raw_idat_data) - step * i < step:
-    #         raw_idat_data_block = bytes(raw_idat_data[i:i + step])
-    #         int_idat_data_block = int.from_bytes(raw_idat_data_block, byteorder="big")
-    #         encrypted_int_idat_data_block = pow(int_idat_data_block, self.public_key[1], self.public_key[0])
-    #         encrypted_data_bytes = encrypted_int_idat_data_block.to_bytes(step, 'big')
-    #         encrypted_data.append(encrypted_data_bytes)
-    #     return encrypted_data
+    def encrypt_ecb(self, raw_idat_data):
+        encrypted_data = []
+        step = 8
+        for i in range(0, len(raw_idat_data), step):
+            # if len(raw_idat_data) - step * i < step:
+            raw_idat_data_block = bytes(raw_idat_data[i:i + step])
+            int_idat_data_block = int.from_bytes(raw_idat_data_block, byteorder="big")
+            encrypted_int_idat_data_block = pow(int_idat_data_block, self.public_key[1], self.public_key[0])
+            encrypted_data_bytes = encrypted_int_idat_data_block.to_bytes(self.key_size, 'big')
+            encrypted_data.append(encrypted_data_bytes)
+        final_data = b''.join(encrypted_data)
+        return final_data
 
     # def decrypt_ecb(self):
 
-    def test_encrypt(self):
-        return pow(2137, self.public_key[1], self.public_key[0])
+    def test_encrypt(self, mess):
+        return pow(mess, self.public_key[1], self.public_key[0])
 
     def test_decrypted(self, mess):
         return pow(mess, self.private_key[1], self.public_key[0])
@@ -86,7 +87,3 @@ if __name__ == '__main__':
     randomRsa = RSA(256)
     print(f"public key = {randomRsa.public_key}")
     print(f"priavte key = {randomRsa.private_key}")
-    enctpted = randomRsa.test_encrypt()
-    print(f"encrypted ={enctpted}")
-    hehe = randomRsa.test_decrypted(enctpted)
-    print(f"oby papiez= {hehe}")
