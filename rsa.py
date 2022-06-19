@@ -17,6 +17,7 @@ class RSA:
         self.public_key = (self.n, self.e)
         self.private_key = (self.n, self.d)
         self.key_size = bits
+        self.init_vec = random.getrandbits(self.public_key[0].bit_length())
 
     def generatePrimeNumber(self, bits):
         while True:
@@ -102,6 +103,60 @@ class RSA:
                 decrypted_data.append(decrypted_byte)
         return decrypted_data
 
+    def encrypt_cbc(self, data):
+        key_size = self.public_key[0].bit_length()
+        block_size = key_size // 8 - 1
+        encrypted_data = bytearray()
+        filler = bytearray()
+        empty = 0
+        while self.init_vec.bit_length() != key_size:
+            self.init_vec = random.getrandbits(self.public_key[0].bit_length())
+        prev_vec = self.init_vec
+
+        for i in range(0, len(data), block_size):
+            block_bytes = bytes(data[i:i + block_size])  # pobranie dobrej wielkości bloku
+
+            if len(block_bytes) % block_size != 0:  # wypełnianie zerami ostatniego niepelnego
+                for empty in range(block_size - (len(block_bytes) % block_size)):
+                    filler.append(0)
+                block_bytes = filler + block_bytes
+
+            prev_vec = prev_vec.to_bytes(block_size + 1, 'big')  # zamiana wektorow i dopasowanie dlugosci
+            prev_vec = int.from_bytes(prev_vec[:len(block_bytes)], 'big')
+
+            xor = int.from_bytes(block_bytes, 'big') ^ prev_vec
+            encrypt_int_block = pow(xor, self.public_key[1], self.public_key[0])  # szyfrowanie
+            prev_vec = encrypt_int_block
+            encrypt_bytes_block = encrypt_int_block.to_bytes(block_size + 1, 'big')
+
+            encrypted_data += encrypt_bytes_block
+
+        return encrypted_data, empty
+
+    def decrypt_cbc(self, encrypted_data, empty):
+        key_size = self.private_key[0].bit_length()
+        decrypted_data = bytearray()
+        block_size = key_size // 8
+        prev_vec = self.init_vec
+
+        for i in range(0, len(encrypted_data), block_size):
+            encrypted_bytes_block = encrypted_data[i:i + block_size]  # pobranie dobrej wielkości bloku
+            encrypted_int_block = int.from_bytes(encrypted_bytes_block, 'big')
+            decrypted_int_block = pow(encrypted_int_block, self.private_key[1], self.private_key[0])  # deszyfrowanie
+
+            prev_vec = prev_vec.to_bytes(block_size, 'big')  # przygotowanie wektora i xor
+            prev_vec = int.from_bytes(prev_vec[:block_size - 1], 'big')
+            xor = prev_vec ^ decrypted_int_block
+
+            decrypted_bytes_block = xor.to_bytes(block_size - 1, 'big')
+            if i + block_size >= len(encrypted_data):  # ewentualne usuniecie leading zeros
+                decrypted_bytes_block = decrypted_bytes_block[empty + 1:]
+            decrypted_data += decrypted_bytes_block
+
+            prev_vec = int.from_bytes(encrypted_bytes_block, 'big')  # podmiana wektora
+
+        return decrypted_data
+
     def encrypt(self, mess):
         return pow(mess, self.public_key[1], self.public_key[0])
 
@@ -113,11 +168,13 @@ if __name__ == '__main__':
     randomRsa = RSA(64)
     print(f"public key = {randomRsa.public_key}")
     print(f"priavte key = {randomRsa.private_key}")
+    addr = r'C:\Users\Karolina\Desktop\Karolina\Studia\3 rok\6 sem\E-media\Png-decoder\Graphics\cubes.png'
+    addr2 = "/home/damiry/Documents/GitHub/Png-decoder/Graphics/cubes.png"
 
-    example = png.Png("/home/damiry/Documents/GitHub/Png-decoder/Graphics/cubes.png")
+    example = png.Png(addr)
     if example.check_signature():
         chunk_names = example.read_all_chunks()
         Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
         image = example.parse_IDAT(Height, Width)
-        working = example.IDAT_chunk_processor_ecb()
-        example.save_file("ecb_please_work", working)
+        working = example.IDAT_chunk_processor_cbc()
+        example.save_file("cbc_please_work", working)

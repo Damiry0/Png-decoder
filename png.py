@@ -7,7 +7,6 @@ import matplotlib.image as img
 import numpy as np
 import xml.dom.minidom as xdm
 
-import cbc_en_de
 import rsa as rsa_alg
 from crypto_cbc import cbc_encrypt, cbc_decrypt
 
@@ -367,11 +366,11 @@ class Png:
                 iv = random.getrandbits(rsa.public_key[0].bit_length())
                 while iv.bit_length() != rsa.public_key[0].bit_length():
                     iv = random.getrandbits(rsa.public_key[0].bit_length())
-                encrypt_data, ech, empty = cbc_encrypt(chunk[1], rsa.public_key, iv)
+                encrypt_data, empty = rsa.encrypt_cbc(chunk[1])
                 encrypt_data_processed = self.parse_IDAT_ecb(encrypt_data, self.height, self.width)
-                decrypt_data = cbc_decrypt(encrypt_data, ech, iv, rsa.private_key, empty)
+                decrypt_data = rsa.decrypt_cbc(encrypt_data, empty)
                 print(1)
-        return encrypt_data_processed
+        return decrypt_data
 
     def save_file(self, file_name, encrypted_data):
         filename = f"{file_name}.png"
