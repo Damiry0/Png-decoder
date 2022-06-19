@@ -1,11 +1,15 @@
 import binascii
+import random
 import struct
 import zlib
 import matplotlib.pyplot as plt
 import matplotlib.image as img
 import numpy as np
 import xml.dom.minidom as xdm
+
+import cbc_en_de
 import rsa as rsa_alg
+from crypto_cbc import cbc_encrypt, cbc_decrypt
 
 
 class Png:
@@ -354,6 +358,21 @@ class Png:
                 print(1)
         return encrypt_data_processed
 
+    def IDAT_chunk_processor_cbc(self):
+        decrypt_data = bytearray()
+        encrypt_data = bytearray()
+        for chunk in self.chunks:
+            if chunk[0] == b'IDAT':
+                rsa = rsa_alg.RSA(128)
+                iv = random.getrandbits(rsa.public_key[0].bit_length())
+                while iv.bit_length() != rsa.public_key[0].bit_length():
+                    iv = random.getrandbits(rsa.public_key[0].bit_length())
+                encrypt_data, ech, empty = cbc_encrypt(chunk[1], rsa.public_key, iv)
+                encrypt_data_processed = self.parse_IDAT_ecb(encrypt_data, self.height, self.width)
+                decrypt_data = cbc_decrypt(encrypt_data, ech, iv, rsa.private_key, empty)
+                print(1)
+        return encrypt_data_processed
+
     def save_file(self, file_name, encrypted_data):
         filename = f"{file_name}.png"
         file_ = open(filename, 'wb')
@@ -411,16 +430,21 @@ def ret_IDAT_comp(filepath):
     example = Png(filepath)
     if not example.check_signature():
         raise Exception("Wrong Filetype")
-    return example.original_idat
+    print(example.output_image)
+    return example.output_image
 
 def ret_IDAT_noncomp(filepath):
     data = []
     example = Png(filepath)
     if example.check_signature():
         chunk_names = example.read_all_chunks()
+        Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
+        image = example.parse_IDAT(Height, Width)
         for chnk in example.chunks:
             if chnk[0] == b'IDAT':
                 data = chnk[1]
     else:
         raise Exception("Wrong Filetype")
-    return data
+    return image
+
+
