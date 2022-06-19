@@ -87,3 +87,8 @@ if __name__ == '__main__':
     randomRsa = RSA(256)
     print(f"public key = {randomRsa.public_key}")
     print(f"priavte key = {randomRsa.private_key}")
+    plaintext = b'abcdefghijklmnopqrstuvwxyz1234567890'
+    xd = pow(2134, randomRsa.public_key[1], randomRsa.public_key[0])
+    res = pow(xd, randomRsa.private_key[1], randomRsa.private_key[0])
+    print(xd)
+    print(res)

@@ -303,7 +303,7 @@ def open_png(filepath):
         TIME = example.parse_tIME()
         TEXT = example.parse_tEXt()
         ITXT = example.parse_iTXt()
-       # ITXT = yaml.dump(xmltodict.parse(ITXT), default_flow_style=False)
+        # ITXT = yaml.dump(xmltodict.parse(ITXT), default_flow_style=False)
         anomizated_chunks = example.anonymization()
         encryption = rsa.RSA(128)
         test= encryption.encrypt_ecb(example.original_idat)
@@ -313,3 +313,22 @@ def open_png(filepath):
     image = img.imread(filepath)
     plt.imshow(image)
     return fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, ITXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE
+
+
+def ret_IDAT_comp(filepath):
+    example = Png(filepath)
+    if not example.check_signature():
+        raise Exception("Wrong Filetype")
+    return example.original_idat
+
+def ret_IDAT_noncomp(filepath):
+    data = []
+    example = Png(filepath)
+    if example.check_signature():
+        chunk_names = example.read_all_chunks()
+        for chnk in example.chunks:
+            if chnk[0] == b'IDAT':
+                data = chnk[1]
+    else:
+        raise Exception("Wrong Filetype")
+    return data
