@@ -1,89 +1,143 @@
 import random
+import png
+from keys import Keys
 
 
 class RSA:
-    def __init__(self, bits):
-        self.p = self.generatePrimeNumber(bits)
-        self.q = self.generatePrimeNumber(bits)
-        self.n = self.p * self.q
-        self.euler_totient = (self.p - 1) * (self.q - 1)
-        self.e = self.calculate_e(self.p, self.q)
-        self.d = pow(self.e, -1, self.euler_totient)
-        self.public_key = (self.n, self.e)
-        self.private_key = (self.n, self.d)
-        self.key_size = bits
 
-    def generatePrimeNumber(self, bits):
-        while True:
-            number = self.nRandomNumber(bits)
-            if not self.isMillerRabinPassed(number):
-                continue
-            else:
-                return number
+    def __init__(self, public_key, private_key):
+        self.public_key = public_key
+        self.private_key = private_key
 
-    def nRandomNumber(self, n):
-        # uses os.urandom() which is fit for cryptography random number generation
-        return random.SystemRandom().randint(2 ** (n - 1) + 1, 2 ** n - 1)
+    def power(self, x, m, n):
+        a = 1
+        while m > 0:
+            if m % 2 == 1:
+                a = (a * x) % n
+            x = (x * x) % n
+            m //= 2
+        return a
 
-    @staticmethod
-    def isMillerRabinPassed(mrc):
-        # Run 20 iterations of Rabin Miller Primality test
-        maxDivisionsByTwo = 0
-        ec = mrc - 1
-        while ec % 2 == 0:
-            ec >>= 1
-            maxDivisionsByTwo += 1
-        assert (2 ** maxDivisionsByTwo * ec == mrc - 1)
+    def encrypting(self, num):
+        result = self.power(num, self.public_key['e'], self.public_key['n'])
+        return result
 
-        def trialComposite(round_tester):
-            if pow(round_tester, ec, mrc) == 1:
-                return False
-            for i in range(maxDivisionsByTwo):
-                if pow(round_tester, 2 ** i * ec, mrc) == mrc - 1:
-                    return False
-            return True
+    def decrypting(self, num):
+        result = self.power(num, self.private_key['d'], self.private_key['n'])
+        return result
 
-        # Set number of trials here
-        numberOfRabinTrials = 20
-        for i in range(numberOfRabinTrials):
-            round_tester = random.randrange(2, mrc)
-            if trialComposite(round_tester):
-                return False
-        return True
+    def ecb_encrypt(self, IDAT_data):
+        key_size = self.public_key['n'].bit_length()
+        block_size = key_size // 8 - 1
+        encrypted_data = bytearray()
+        padding = bytearray()
+        after_iend_data = bytearray()
+        empty = 0
 
-    def calculate_e(self, p, q):
-        phi = (p - 1) * (q - 1)
-        if phi > 65537:
-            return 65537  # 2^16+1 prime number
-        else:
-            e = phi - 1
-            while True:
-                if self.isMillerRabinPassed(e): return e
-                e = e - 2
+        for i in range(0, len(IDAT_data), block_size):
+            bytes_block = bytes(IDAT_data[i:i + block_size])
 
-    def encrypt_ecb(self, raw_idat_data):
-        encrypted_data = []
-        step = 8
-        for i in range(0, len(raw_idat_data), step):
-            # if len(raw_idat_data) - step * i < step:
-            raw_idat_data_block = bytes(raw_idat_data[i:i + step])
-            int_idat_data_block = int.from_bytes(raw_idat_data_block, byteorder="big")
-            encrypted_int_idat_data_block = pow(int_idat_data_block, self.public_key[1], self.public_key[0])
-            encrypted_data_bytes = encrypted_int_idat_data_block.to_bytes(self.key_size, 'big')
-            encrypted_data.append(encrypted_data_bytes)
-        final_data = b''.join(encrypted_data)
-        return final_data
+            # padding
+            if len(bytes_block) % block_size != 0:
+                for empty in range(block_size - (len(bytes_block) % block_size)):
+                    padding.append(0)
+                bytes_block = padding + bytes_block
 
-    # def decrypt_ecb(self):
+            int_block = int.from_bytes(bytes_block, 'big')
+            encrypt_block_int = self.encrypting(int_block)
+            encrypt_block_bytes = encrypt_block_int.to_bytes(block_size + 1, 'big')
 
-    def test_encrypt(self, mess):
-        return pow(mess, self.public_key[1], self.public_key[0])
+            # after_iend_data.append(encrypt_block_bytes[-1])
+            # encrypt_block_bytes = encrypt_block_bytes[:-1]
+            encrypted_data += encrypt_block_bytes
 
-    def test_decrypted(self, mess):
-        return pow(mess, self.private_key[1], self.public_key[0])
+        return encrypted_data, empty
+
+    def ecb_decrypt(self, encrypted_data, after_iend_data):
+        key_size = self.private_key['n'].bit_length()
+        decrypted_data = bytearray()
+        block_size = key_size // 8
+        k = 0
+
+        for i in range(0, len(encrypted_data), block_size):
+            encrypted_block_bytes = encrypted_data[i:i + block_size]
+            encrypted_block_int = int.from_bytes(encrypted_block_bytes, 'big')
+
+            decrypted_block_int = self.decrypting(encrypted_block_int)
+            decrypted_block_bytes = decrypted_block_int.to_bytes(block_size, 'big')
+
+            decrypted_data += decrypted_block_bytes
+            k += 1
+        return decrypted_data
+
+    def cbc_encrypt(self, IDAT_data):
+        key_size = self.public_key['n'].bit_length()
+        block_size = key_size // 8 - 1
+        encrypted_data = bytearray()
+        padding = bytearray()
+        after_iend_data = bytearray()
+        self.vectorIV = random.getrandbits(key_size)
+        previous_vector = self.vectorIV
+
+        for i in range(0, len(IDAT_data), block_size):
+            bytes_block = bytes(IDAT_data[i:i + block_size])
+
+            # padding
+            if len(bytes_block) % block_size != 0:
+                for empty in range(block_size - (len(bytes_block) % block_size)):
+                    padding.append(0)
+                bytes_block = padding + bytes_block
+
+            previous_vector = previous_vector.to_bytes(block_size + 1, 'big')
+            previous_vector = int.from_bytes(previous_vector[:len(bytes_block)], 'big')
+
+            xor = int.from_bytes(bytes_block, 'big') ^ previous_vector
+            encrypt_block_int = self.encrypting(xor)
+            previous_vector = encrypt_block_int
+            encrypt_block_bytes = encrypt_block_int.to_bytes(block_size + 1, 'big')
+
+            after_iend_data.append(encrypt_block_bytes[-1])
+            encrypt_block_bytes = encrypt_block_bytes[:-1]
+            encrypted_data += encrypt_block_bytes
+
+        return encrypted_data, after_iend_data
+
+    def cbc_decrypt(self, encrypted_data, empty):
+        key_size = self.private_key['n'].bit_length()
+        decrypted_data = bytearray()
+        block_size = key_size // 8 - 1
+        previous_vector = self.vectorIV
+        k = 0
+
+        for i in range(0, len(encrypted_data), block_size):
+            encrypted_block_bytes = encrypted_data[i:i + block_size]
+            encrypted_block_int = int.from_bytes(encrypted_block_bytes, 'big')
+            decrypted_block_int = self.decrypting(encrypted_block_int)
+
+            previous_vector = previous_vector.to_bytes(block_size, 'big')
+            previous_vector = int.from_bytes(previous_vector[:block_size], 'big')
+            xor = previous_vector ^ decrypted_block_int
+
+            decrypted_block_bytes = xor.to_bytes(block_size, 'big')
+            decrypted_data += decrypted_block_bytes
+
+            previous_vector = int.from_bytes(encrypted_block_bytes, 'big')
+            k += 1
+
+        return decrypted_data
 
 
 if __name__ == '__main__':
-    randomRsa = RSA(256)
-    print(f"public key = {randomRsa.public_key}")
-    print(f"priavte key = {randomRsa.private_key}")
+    example = png.Png("/home/damiry/Documents/GitHub/Png-decoder/Graphics/cubes.png")
+    if example.check_signature():
+        chunk_names = example.read_all_chunks()
+        Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
+        please_work = example.get_IDAT()
+        keys = Keys(256)
+        public_key = keys.generate_public_key()
+        private_key = keys.generate_private_key()
+        rsa = RSA(public_key, private_key)
+        encrypt_data, after_iend_dataaa = rsa.ecb_encrypt(please_work)
+        LETSGO = example.parse_IDAT_ECB(180, 240, encrypt_data)
+        decrypt_data = rsa.ecb_decrypt(LETSGO, after_iend_dataaa)
+        example.create_ecb_image_2(decrypt_data)

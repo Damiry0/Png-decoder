@@ -1,10 +1,11 @@
 import binascii
+import struct
 import zlib
 import matplotlib.pyplot as plt
 import matplotlib.image as img
 import numpy as np
 import xml.dom.minidom as xdm
-import rsa
+import rsa as rsa_alg
 
 
 class Png:
@@ -15,8 +16,10 @@ class Png:
     def __init__(self, filepath):
         self.file = open(filepath, 'rb')
         self.chunks = []
+        self.width = []
+        self.height = []
         self.original_idat = []
-        self.output_image = []
+        self.output_image = bytearray()
 
     def check_signature(self):
         return self.file.read(8) == self.PNG_SIGNATURE  # png signature in binary
@@ -48,10 +51,16 @@ class Png:
         self.chunks = [item for item in self.chunks if item[0] != b'IDAT']
         self.chunks.insert(-1, (b'IDAT', IDAT_data))
 
+    def get_idat(self):
+        idat_chunk = [(x, y) for x, y in self.chunks if x == b"IDAT"][0][1]
+        return idat_chunk
+
     def parse_IHDR(self):
         if self.chunks[0][0] == b'IHDR':
             width = int.from_bytes(self.chunks[0][1][:4], byteorder="big")
+            self.width = width
             height = int.from_bytes(self.chunks[0][1][4:8], byteorder="big")
+            self.height = height
             bit_depth = self.chunks[0][1][8] if self.chunks[0][1][8] in (1, 2, 4, 8, 16) else Exception(
                 "Not valid bit depth:" + str(self.chunks[0][1][8]))
             color_type = self.chunks[0][1][9] if self.chunks[0][1][9] in (0, 2, 3, 4, 6) else Exception(
@@ -87,6 +96,10 @@ class Png:
         return self.output_image[
             (r - 1) * self.STEP + c - self.LENGTH_OF_BYTES] if r > 0 and c >= self.LENGTH_OF_BYTES else 0
 
+    def get_IDAT(self):
+        idat_chunk = [(x, y) for x, y in self.chunks if x == b"IDAT"][0][1]
+        return idat_chunk
+
     def parse_IDAT(self, height, width):
         i = 0
         idat_chunk = [(x, y) for x, y in self.chunks if x == b"IDAT"][0][1]
@@ -109,7 +122,33 @@ class Png:
                     Recon_x = Filter + self.paeth_predictor(self.unfilter_sub(r, c), self.unfilter_up(r, c),
                                                             self.unfilter_average(r, c))
                 else:
-                    return self.output_image
+                    raise Exception('unknown filter type: ' + str(filter_type))
+                self.output_image.append(Recon_x & 0xff)  # truncation to byte
+        return self.output_image
+
+    def parse_IDAT_ECB(self, height, width, image):
+        i = 0
+        idat_chunk = [(x, y) for x, y in self.chunks if x == b"IDAT"][0][1]
+        self.STEP = self.LENGTH_OF_BYTES * width
+        for r in range(height):
+            filter_type = idat_chunk[i]
+            i += 1
+            for c in range(self.STEP):
+                Filter = idat_chunk[i]
+                i += 1
+                if filter_type == 0:
+                    Recon_x = Filter
+                elif filter_type == 1:
+                    Recon_x = Filter + self.unfilter_sub(r, c)
+                elif filter_type == 2:
+                    Recon_x = Filter + self.unfilter_up(r, c)
+                elif filter_type == 3:
+                    Recon_x = Filter + (self.unfilter_sub(r, c) + self.unfilter_up(r, c)) // 2
+                elif filter_type == 4:
+                    Recon_x = Filter + self.paeth_predictor(self.unfilter_sub(r, c), self.unfilter_up(r, c),
+                                                            self.unfilter_average(r, c))
+                else:
+                    raise Exception('unknown filter type: ' + str(filter_type))
                 self.output_image.append(Recon_x & 0xff)  # truncation to byte
         return self.output_image
 
@@ -288,13 +327,84 @@ class Png:
         decoded_chunks = binascii.unhexlify(decoded_chunks)
         return decoded_chunks
 
+    def create_ecb_image(self, encrypt_data):
+        filename = "ecb_haha.png"
+        temporary_file = open(filename, 'wb')
+        temporary_file.write(self.PNG_SIGNATURE)
+        for (chunk_name, chunk_data) in self.chunks:
+            if chunk_name in [b'IDAT']:
+                new_data = zlib.compress(encrypt_data, 9)
+                new_crc = zlib.crc32(new_data, zlib.crc32(struct.pack('>4s', b'IDAT')))
+                chunk_len = len(new_data)
+                temporary_file.write(struct.pack('>I', chunk_len))
+                temporary_file.write(chunk_name)
+                temporary_file.write(new_data)
+                temporary_file.write(struct.pack('>I', new_crc))
+            else:
+                chunk_len = len(chunk_data)
+                check_sum = zlib.crc32(chunk_data, zlib.crc32(struct.pack('>4s', chunk_name)))
+                temporary_file.write(struct.pack('>I', chunk_len))
+                temporary_file.write(chunk_name)
+                temporary_file.write(chunk_name)
+                temporary_file.write(struct.pack('>I', check_sum))
+        temporary_file.close()
+        return filename
+
+    def save_file(self, file_name, encrypted_data):
+        filename = f"{file_name}.png"
+        file_ = open(filename, 'wb')
+        file_.write(self.PNG_SIGNATURE)
+        for chunk_type, chunk_data in self.chunks:
+            if chunk_type in [b'IDAT']:
+                idat_data = bytes(encrypted_data)
+                new_data, new_crc = self.compress_IDAT(idat_data)
+                chunk_len = len(new_data)
+                file_.write(struct.pack('>I', chunk_len))
+                file_.write(chunk_type)
+                file_.write(new_data)
+                file_.write(struct.pack('>I', new_crc))
+            else:
+                chunk_len = len(chunk_data)
+                check_sum = zlib.crc32(chunk_type + chunk_data)
+                file_.write(struct.pack('>I', chunk_len))
+                file_.write(chunk_type)
+                file_.write(chunk_data)
+                file_.write(struct.pack('>I', check_sum))
+        file_.close()
+        return filename
+
+    def compress_IDAT(self, all_data):
+        new_data = zlib.compress(all_data, 9)
+        crc = zlib.crc32(new_data, zlib.crc32(struct.pack('>4s', b'IDAT')))
+        return new_data, crc
+
+    def create_ecb_image_2(self, data):
+        temporary_file = open("ecb.png", 'wb')
+        temporary_file.write(self.PNG_SIGNATURE)
+        for chunk_type, chunk_data in self.chunks:
+            if chunk_type in [b'IDAT']:
+                new_data = zlib.compress(data, 9)
+                new_crc = zlib.crc32(new_data, zlib.crc32(struct.pack('>4s', b'IDAT')))
+                chunk_len = len(new_data)
+                temporary_file.write(struct.pack('>I', chunk_len))
+                temporary_file.write(chunk_type)
+                temporary_file.write(new_data)
+                temporary_file.write(struct.pack('>I', new_crc))
+            else:
+                chunk_len = len(chunk_data)
+                check_sum = zlib.crc32(chunk_type + chunk_data)
+                temporary_file.write(struct.pack('>I', chunk_len))
+                temporary_file.write(chunk_type)
+                temporary_file.write(chunk_data)
+                temporary_file.write(struct.pack('>I', check_sum))
+        temporary_file.close()
+
 
 def open_png(filepath):
     example = Png(filepath)
     if example.check_signature():
         chunk_names = example.read_all_chunks()
         Width, Height, Bit_depth, Color_type, Compression_method, Filter_method, Interlace_method = example.parse_IHDR()
-        image = example.parse_IDAT(Height, Width)
         PLTE = example.parse_PLTE()
         Gamma = example.parse_gAMA()
         SRGB = example.parse_sRGB()
@@ -303,13 +413,31 @@ def open_png(filepath):
         TIME = example.parse_tIME()
         TEXT = example.parse_tEXt()
         ITXT = example.parse_iTXt()
-       # ITXT = yaml.dump(xmltodict.parse(ITXT), default_flow_style=False)
+        # ITXT = yaml.dump(xmltodict.parse(ITXT), default_flow_style=False)
         anomizated_chunks = example.anonymization()
-        encryption = rsa.RSA(128)
-        test= encryption.encrypt_ecb(example.original_idat)
     else:
         raise Exception("Wrong Filetype")
     fig = plt.figure()
     image = img.imread(filepath)
     plt.imshow(image)
     return fig, chunk_names, Width, Height, Bit_depth, Color_type, Gamma, SRGB, PHYs, CHRM, TIME, TEXT, ITXT, Compression_method, Filter_method, Interlace_method, anomizated_chunks, PLTE
+
+
+def ret_IDAT_comp(filepath):
+    example = Png(filepath)
+    if not example.check_signature():
+        raise Exception("Wrong Filetype")
+    return example.original_idat
+
+
+def ret_IDAT_noncomp(filepath):
+    data = []
+    example = Png(filepath)
+    if example.check_signature():
+        chunk_names = example.read_all_chunks()
+        for chnk in example.chunks:
+            if chnk[0] == b'IDAT':
+                data = chnk[1]
+    else:
+        raise Exception("Wrong Filetype")
+    return data
