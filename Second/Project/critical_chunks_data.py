@@ -1,5 +1,3 @@
-import numpy
-import matplotlib.pyplot as plt
 
 class IHDRData:
 
@@ -14,19 +12,14 @@ class IHDRData:
         self.filter_method = self.IHDR_data[5]
         self.interlace_method = self.IHDR_data[6]
 
-
     def get_width(self):
         return self.width
-
 
     def get_height(self):
         return self.height
 
-
     def get_color_type(self):
         return self.color_type
 
-
     def get_bit_depth(self):
         return self.bit_depth
-

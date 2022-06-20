@@ -1,14 +1,15 @@
 import random
 
+
 class Keys:
 
     def __init__(self, key_size=1024):
         self.key_size = key_size
         self.p, self.q = self.create_pq(key_size)
-        self.euler_function = (self.p - 1)*(self.q - 1)
+        self.euler_function = (self.p - 1) * (self.q - 1)
         self.n = self.p * self.q
 
-    def is_prime(self,number):
+    def is_prime(self, number):
         # https://www.geeksforgeeks.org/how-to-generate-large-prime-numbers-for-rsa-algorithm/
         # Miller-Rabin test for prime
         if number == 0 or number == 1 or number == 4 or number == 6 or number == 8 or number == 9:
@@ -31,23 +32,24 @@ class Keys:
                     return False
             return True
             # ilosc iteracji
+
         for i in range(10):
-            # używa os.urandom() ktore wedlug dokumentacji opiera sie na wsparciu sprzetowym gwarantujac zabezpieczenie kryptograficzne
+            # używa os.urandom() ktore wedlug dokumentacji opiera sie na wsparciu sprzetowym gwarantujac
+            # zabezpieczenie kryptograficzne
             a = random.SystemRandom().randint(2, number)
             if trial_composite(a):
                 return False
 
         return True
 
-    def prime_generator(self,prime_binary_size):
+    def prime_generator(self, prime_binary_size):
         while True:
             number = random.SystemRandom().randint(2 ** (prime_binary_size - 1), 2 ** prime_binary_size - 1)
             if self.is_prime(number): return number
 
     def create_pq(self, n_size):
 
-        p_size = int(n_size / 2) + random.SystemRandom().randint(int(n_size / 100),
-                                                    int(n_size / 10))
+        p_size = int(n_size / 2) + random.SystemRandom().randint(int(n_size / 100), int(n_size / 10))
         q_size = n_size - p_size
         p, q = 0, 0
         while (p * q).bit_length() != n_size or p == q:
@@ -57,7 +59,7 @@ class Keys:
 
     def create_e(self, p, q):
         phi = (p - 1) * (q - 1)
-        if phi > 65537: # 2^16+1 prime number, dla optymalizacji
+        if phi > 65537:  # 2^16+1 prime number, dla optymalizacji
             return 65537
         else:
             e = phi - 1
@@ -84,10 +86,10 @@ class Keys:
             v1, v2, v3, u1, u2, u3 = (u1 - q * v1), (u2 - q * v2), (u3 - q * v3), v1, v2, v3
         return u1 % phi
 
-    def create_publc_key(self):
+    def create_public_key(self):
         self.p, self.q = self.create_pq(self.key_size)
         self.e = self.create_e(self.p, self.q)
-        return {"e": self.e, "n": self.p*self.q}
+        return {"e": self.e, "n": self.p * self.q}
 
     def create_private_key(self):
         self.d = self.create_d(self.e, self.p, self.q)

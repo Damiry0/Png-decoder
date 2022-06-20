@@ -44,7 +44,7 @@ def display_photo(chunk_processor):
 
 
 def main():
-    myFont = font.Font(family='Helvetica')
+    my_font = font.Font(family='Helvetica')
     gui.title("CIPHER PNG")
     window_width = 500
     window_height = 500
@@ -55,20 +55,13 @@ def main():
     gui.geometry(f'{window_width}x{window_height}+{center_x}+{center_y}')
     frame = Frame(gui)
 
-    # label = Label(gui, text="Choose an option", font=('Helvetica 15 bold'))
-    # def on_click():
-    #    label["text"] = "Work in progress..."
-    #    b["state"] = "disabled"
-
-
     b_ecb = Button(frame, bg="#9AC791", width=15, height=2, text="Cipher with ECB", command=choose_photo_ecb)
-    b_ecb['font'] = myFont
+    b_ecb['font'] = my_font
     b_cbc = Button(frame, bg="#9AC791", width=15, height=2, text="Cipher with CBC", command=choose_photo_cbc)
-    b_cbc['font'] = myFont
-    frame.grid(row=0, column=0, columnspan=1, pady=10, padx=10, ipadx=175)
+    b_cbc['font'] = my_font
+    frame.grid(row=0, column=0, columnspan=1, pady=10, padx=10, ipadx=160)
     b_ecb.pack(side="top")
     b_cbc.pack(side="top")
-    # label.pack(side="bottom")
 
     gui.mainloop()
 
