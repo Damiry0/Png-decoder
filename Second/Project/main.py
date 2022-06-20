@@ -15,8 +15,9 @@ def choose_photo_ecb():
     chunk_processor.IDAT_chunk_processor_ecb()
     chunk_processor.IEND_chunk_processor()
     chunk_processor.create_ecb_image()
-    # chunk_processor.create_ecb_library_image()
-    display_photo(chunk_processor)
+    chunk_processor.create_ecb_library_image()
+    chunk_processor.create_decrypted_image_ecb()
+   # display_photo(chunk_processor)
 
 
 def choose_photo_cbc():
@@ -28,6 +29,7 @@ def choose_photo_cbc():
     chunk_processor.IDAT_chunk_processor_cbc()
     chunk_processor.IEND_chunk_processor()
     chunk_processor.create_cbc_image()
+    chunk_processor.create_decrypted_image_cbc()
     display_photo(chunk_processor)
 
 

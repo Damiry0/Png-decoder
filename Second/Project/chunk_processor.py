@@ -61,7 +61,7 @@ class PNGChunkProcessor:
         rsa = RSA(public_key, private_key)
         self.encrypt_data, self.after_iend_data = rsa.ecb_encrypt(IDAT_data)
         self.decrypt_data = rsa.ecb_decrypt(self.encrypt_data, self.after_iend_data)
-        # self.encrypt_data_from_library, self.after_iend_data__from_library = rsa.crypto_library_encrypt(IDAT_data)
+       # self.encrypt_data_from_library, self.after_iend_data__from_library = rsa.crypto_library_encrypt(IDAT_data)
 
     def IDAT_chunk_processor_cbc(self):
         IDAT_data = b''.join(chunk.chunk_data for chunk in self.chunks
@@ -152,7 +152,7 @@ class PNGChunkProcessor:
         temporary_file.close()
         return filename
 
-    '''def create_ecb_library_image(self):
+    def create_ecb_library_image(self):
         filename = "ecb_library.png"
         img_path = "./images/{}".format(filename)
         if Path(img_path).is_file():
@@ -174,4 +174,52 @@ class PNGChunkProcessor:
                 temporary_file.write(chunk.chunk_data)
                 temporary_file.write(struct.pack('>I', chunk.chunk_crc))
         temporary_file.close()
-        return filename'''
+        return filename
+
+    def create_decrypted_image_ecb(self):
+        filename = "ecb_decrypt.png"
+        img_path = "./images/{}".format(filename)
+        if Path(img_path).is_file():
+            os.remove(img_path)
+        temporary_file = open(img_path, 'wb')
+        temporary_file.write(PNGChunkProcessor.PNG_SIGNATURE)
+        for chunk in self.chunks:
+            if chunk.chunk_type in [b'IDAT']:
+                new_data = zlib.compress(self.decrypt_data, 9)
+                new_crc = zlib.crc32(new_data, zlib.crc32(struct.pack('>4s', b'IDAT')))
+                chunk_len = len(new_data)
+                temporary_file.write(struct.pack('>I', chunk_len))
+                temporary_file.write(chunk.chunk_type)
+                temporary_file.write(new_data)
+                temporary_file.write(struct.pack('>I', new_crc))
+            else:
+                temporary_file.write(struct.pack('>I', chunk.chunk_length))
+                temporary_file.write(chunk.chunk_type)
+                temporary_file.write(chunk.chunk_data)
+                temporary_file.write(struct.pack('>I', chunk.chunk_crc))
+        temporary_file.close()
+        return filename
+
+    def create_decrypted_image_cbc(self):
+        filename = "cbc_decrypt.png"
+        img_path = "./images/{}".format(filename)
+        if Path(img_path).is_file():
+            os.remove(img_path)
+        temporary_file = open(img_path, 'wb')
+        temporary_file.write(PNGChunkProcessor.PNG_SIGNATURE)
+        for chunk in self.chunks:
+            if chunk.chunk_type in [b'IDAT']:
+                new_data = zlib.compress(self.decrypt_data, 9)
+                new_crc = zlib.crc32(new_data, zlib.crc32(struct.pack('>4s', b'IDAT')))
+                chunk_len = len(new_data)
+                temporary_file.write(struct.pack('>I', chunk_len))
+                temporary_file.write(chunk.chunk_type)
+                temporary_file.write(new_data)
+                temporary_file.write(struct.pack('>I', new_crc))
+            else:
+                temporary_file.write(struct.pack('>I', chunk.chunk_length))
+                temporary_file.write(chunk.chunk_type)
+                temporary_file.write(chunk.chunk_data)
+                temporary_file.write(struct.pack('>I', chunk.chunk_crc))
+        temporary_file.close()
+        return filename
